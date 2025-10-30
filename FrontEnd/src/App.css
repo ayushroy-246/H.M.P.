@@ -1,9 +1,0 @@
-@import "tailwindcss";
-
-/* Enable class-based dark mode */
-@variant dark (&:is(.dark *));
-
-#root {
-  width: 100vw;
-  margin: 0 auto;
-}
