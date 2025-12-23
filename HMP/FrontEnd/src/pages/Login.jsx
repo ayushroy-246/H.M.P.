@@ -23,15 +23,15 @@ const Login = ({ role }) => {
       subtitle: "Access your hostel portal",
       fields: [
         {
-          name: "email",
-          type: "email",
-          label: "College Email",
-          placeholder: "your.email@nitjsr.ac.in",
+          name: "username",
+          type: "string",
+          label: "Username",
+          placeholder: "Enter your username",
           required: true
         },
         {
           name: "password",
-          type: "password",
+          type: "string",
           label: "Password",
           placeholder: "Enter your password",
           required: true
