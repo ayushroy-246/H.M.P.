@@ -9,7 +9,7 @@ const Login = ({ role }) => {
   // Form states
   const [formData, setFormData] = useState({
     username: '',
-    mobile: '',,
+    mobile: '',
     password: '',
     pin: ''
   })
@@ -22,14 +22,14 @@ const Login = ({ role }) => {
       fields: [
         {
           name: "username",
-          type: "string",
+          type: "text",
           label: "Username",
           placeholder: "Enter your Username",
           required: true
         },
         {
           name: "password",
-          type: "string",
+          type: "password",
           label: "Password",
           placeholder: "Enter your password",
           required: true
@@ -68,7 +68,7 @@ const Login = ({ role }) => {
       fields: [
         {
           name: "username",
-          type: "string",
+          type: "text",
           label: "Username",
           placeholder: "Enter your Username",
           required: true
@@ -90,8 +90,8 @@ const Login = ({ role }) => {
       fields: [
         {
           name: "username",
-          type: "string",
-          label: "username",
+          type: "text",
+          label: "Username",
           placeholder: "Enter your Username",
           required: true
         },
