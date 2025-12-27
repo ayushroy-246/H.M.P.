@@ -298,14 +298,19 @@ const changeCurrentPassword = AsyncHandler(async (req, res) => {
 });
 
 const createSuperAdmin = AsyncHandler(async (req, res) => {
+
+    if (process.env.ALLOW_SUPER_ADMIN_CREATION !== "true") {
+        throw new ApiError(403, "Super Admin creation is disabled");
+    }
+    
     const { username, email, password, fullName } = req.body;
 
-    // 1️⃣ Validate input
+    
     if (!username || !email || !password || !fullName) {
         throw new ApiError(400, "All fields are required");
     }
 
-    // 2️⃣ Check if super admin already exists
+    
     const existingSuperAdmin = await User.findOne({
         role: "superAdmin",
         isSuperAdmin: true
@@ -315,7 +320,7 @@ const createSuperAdmin = AsyncHandler(async (req, res) => {
         throw new ApiError(403, "Super Admin already exists. This operation can only be performed once.");
     }
 
-    // 3️⃣ Check duplicate username or email
+    
     const existingUser = await User.findOne({
         $or: [{ username }, { email }]
     });
@@ -324,7 +329,7 @@ const createSuperAdmin = AsyncHandler(async (req, res) => {
         throw new ApiError(409, "Username or Email already exists");
     }
 
-    // 4️⃣ Create super admin
+    
     const superAdmin = await User.create({
         username,
         email,
