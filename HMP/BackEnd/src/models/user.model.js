@@ -32,11 +32,6 @@ const userSchema = new mongoose.Schema(
             required: true,
         },
 
-        isSuperAdmin: {
-            type: Boolean,
-            default: false,
-        },
-
         hostel: {
             type: mongoose.Schema.Types.ObjectId,
             ref: "Hostel",
@@ -45,12 +40,20 @@ const userSchema = new mongoose.Schema(
         password: {
             type: String,
             required: [true, "Password is required"],
-            select: false
+        },
+
+        room_no: {
+            type: mongoose.Schema.Types.ObjectId,
+            ref: "Room",
+        },
+
+        mobile:{
+            typer: String
         },
 
         refreshToken: {
             type: String,
-            select: false
+
         },
     },
     { timestamps: true }

@@ -113,31 +113,31 @@ const refreshAccessToken = AsyncHandler(async (req, res) => {
 
 const logoutUser = AsyncHandler(async (req, res) => {
     await User.findByIdAndUpdate(
-        req.user._id,{
-            $set:{
-                refreshToken: null
-            }
-        },
+        req.user._id, {
+        $set: {
+            refreshToken: null
+        }
+    },
         {
-            new:true
+            new: true
         }
     )
-    const options ={
-        httpOnly:true,
+    const options = {
+        httpOnly: true,
         secure: process.env.NODE_ENV === "production",
         sameSite: "strict",
     }
     return res
-    .status(200)
-    .clearCookie("accessToken", options)
-    .clearCookie("refreshToken", options)
-    .json(
-        new ApiResponse(
-            200,
-            null,
-            `${req.user.role} logged out successfully`
+        .status(200)
+        .clearCookie("accessToken", options)
+        .clearCookie("refreshToken", options)
+        .json(
+            new ApiResponse(
+                200,
+                null,
+                `${req.user.role} logged out successfully`
+            )
         )
-    )
 })
 
 const createAdmin = AsyncHandler(async (req, res) => {
@@ -145,7 +145,7 @@ const createAdmin = AsyncHandler(async (req, res) => {
         throw new ApiError(403, "Only super admin can create admin")
     }
 
-    const { username, fullName, email, password } = req.body
+    const { username, fullName, email, password, mobile } = req.body
 
     if (!username || !fullName || !password) {
         throw new ApiError(400, "All fields are required")
@@ -161,16 +161,24 @@ const createAdmin = AsyncHandler(async (req, res) => {
         fullName,
         email,
         password,
+        mobile,
         role: "admin"
     })
 
+    const createdUser = await User.findById(admin._id).select(
+        "-password -refreshToken"
+    );
+
+    if (!createdUser) {
+        throw new ApiError(
+            500,
+            "Something went wrong while registering the user"
+        );
+    }
     return res.status(201).json(
         new ApiResponse(
             201,
-            {
-                id: admin._id,
-                username: admin.username
-            },
+            createdUser,
             "Admin created successfully"
         )
     )
@@ -187,7 +195,8 @@ const createUser = AsyncHandler(async (req, res) => {
         email,
         password,
         role,
-        hostel
+        hostel,
+        mobile
     } = req.body
 
     if (!["student", "warden"].includes(role)) {
@@ -205,18 +214,26 @@ const createUser = AsyncHandler(async (req, res) => {
         email,
         password,
         role,
-        hostel
+        hostel,
+        mobile
     })
+
+    const createdUser = await User.findById(user._id).select(
+        "-password -refreshToken"
+    );
+
+    if (!createdUser) {
+        throw new ApiError(
+            500,
+            "Something went wrong while registering the user"
+        );
+    }
 
     return res.status(201).json(
         new ApiResponse(
             201,
-            {
-                id: user._id,
-                username: user.username,
-                role: user.role
-            },
-            "User created successfully"
+            createdUser,
+            `${createdUser.role} created successfully`
         )
     )
 })
@@ -243,16 +260,16 @@ const forgotPassword = AsyncHandler(async (req, res) => {
     );
 });
 
-const updateUserBySuperAdmin = AsyncHandler(async (req, res) => {
-    const { username, email } = req.body;
+const updateUserByAdmin = AsyncHandler(async (req, res) => {
+    const { username, email, mobile } = req.body;
 
-    if (!username && !email) {
+    if (!username && !email && !mobile) {
         throw new ApiError(400, "Nothing to update");
     }
 
     const user = await User.findByIdAndUpdate(
         req.params.userId,
-        { username, email },
+        { username, email, mobile },
         { new: true, runValidators: true }
     ).select("-password -refreshToken");
 
@@ -261,7 +278,7 @@ const updateUserBySuperAdmin = AsyncHandler(async (req, res) => {
     }
 
     return res.json(
-        new ApiResponse(200, user, "User updated successfully")
+        new ApiResponse(200, user, `${user.role} details updated successfully`)
     );
 });
 
@@ -302,25 +319,25 @@ const createSuperAdmin = AsyncHandler(async (req, res) => {
     if (process.env.ALLOW_SUPER_ADMIN_CREATION !== "true") {
         throw new ApiError(403, "Super Admin creation is disabled");
     }
-    
-    const { username, email, password, fullName } = req.body;
 
-    
-    if (!username || !email || !password || !fullName) {
+    const { username, email, password, fullName, mobile } = req.body;
+
+
+    if (!username || !email || !password || !fullName || !mobile) {
         throw new ApiError(400, "All fields are required");
     }
 
-    
+
     const existingSuperAdmin = await User.findOne({
         role: "superAdmin",
-        isSuperAdmin: true
+
     });
 
     if (existingSuperAdmin) {
         throw new ApiError(403, "Super Admin already exists. This operation can only be performed once.");
     }
 
-    
+
     const existingUser = await User.findOne({
         $or: [{ username }, { email }]
     });
@@ -329,28 +346,39 @@ const createSuperAdmin = AsyncHandler(async (req, res) => {
         throw new ApiError(409, "Username or Email already exists");
     }
 
-    
+
     const superAdmin = await User.create({
         username,
         email,
-        password, 
+        password,
         fullName,
         role: "superAdmin",
-        isSuperAdmin: true
+        mobile
     });
 
-    // 5️⃣ Since password and refreshToken have select: false, 
-    // they're already excluded from the response
+    const createdUser = await User.findById(superAdmin._id).select(
+        "-password -refreshToken"
+    );
+
+    if (!createdUser) {
+        throw new ApiError(
+            500,
+            "Something went wrong while registering the user"
+        );
+    }
+
     return res
         .status(201)
         .json(
             new ApiResponse(
                 201,
-                superAdmin,
+                createdUser,
                 "Super Admin created successfully"
             )
         );
 });
+
+
 
 export {
     loginUser,
@@ -359,7 +387,7 @@ export {
     createAdmin,
     createUser,
     forgotPassword,
-    updateUserBySuperAdmin,
+    updateUserByAdmin,
     changeCurrentPassword,
     createSuperAdmin
 }
