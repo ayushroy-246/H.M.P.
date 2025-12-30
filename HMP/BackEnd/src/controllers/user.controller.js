@@ -2,6 +2,7 @@ import { AsyncHandler } from "../utilities/AsyncHandler.js"
 import { ApiError } from "../utilities/ApiError.js"
 import { ApiResponse } from "../utilities/ApiResponse.js"
 import { User } from "../models/user.model.js"
+import { Room } from "../models/room.model.js"
 import jwt from "jsonwebtoken"
 
 
@@ -184,7 +185,7 @@ const createAdmin = AsyncHandler(async (req, res) => {
     )
 })
 
-const createUser = AsyncHandler(async (req, res) => {
+const createWarden = AsyncHandler(async (req, res) => {
     if (!["admin", "superAdmin"].includes(req.user.role)) {
         throw new ApiError(403, "Unauthorized")
     }
@@ -198,14 +199,17 @@ const createUser = AsyncHandler(async (req, res) => {
         hostel,
         mobile
     } = req.body
+    if (!username || !fullName || !email || !password || !role || !hostel) {
+        throw new ApiError(400, "All fields are required")
+    }
 
-    if (!["student", "warden"].includes(role)) {
-        throw new ApiError(400, "Invalid role")
+    if (role !== "warden") {
+        throw new ApiError(400, "Invalid role");
     }
 
     const existingUser = await User.findOne({ username })
     if (existingUser) {
-        throw new ApiError(409, "User already exists")
+        throw new ApiError(409, "Warden already exists")
     }
 
     const user = await User.create({
@@ -233,7 +237,77 @@ const createUser = AsyncHandler(async (req, res) => {
         new ApiResponse(
             201,
             createdUser,
-            `${createdUser.role} created successfully`
+            "Warden is created successfully"
+        )
+    )
+})
+
+const createStudent = AsyncHandler(async (req, res) => {
+    if (!["admin", "superAdmin"].includes(req.user.role)) {
+        throw new ApiError(403, "Unauthorized")
+    }
+
+    const {
+        username,
+        fullName,
+        email,
+        password,
+        role,
+        hostel,
+        mobile,
+        room
+    } = req.body
+
+    if (!username || !fullName || !email || !password || !role || !hostel || !room) {
+        throw new ApiError(400, "All fields are required")
+    }
+
+    if (role !== "student") {
+        throw new ApiError(400, "Invalid role");
+    }
+
+    const roomDoc = await Room.findById(room);
+    if (!roomDoc || roomDoc.hostel.toString() !== hostel) {
+        throw new ApiError(400, "Room does not belong to selected hostel");
+    }
+
+    const roomAssigned = await User.findOne({ room })
+    if (roomAssigned) {
+        throw new ApiError(409, "Room already assigned to another student")
+    }
+
+    const existingUser = await User.findOne({ username })
+    if (existingUser) {
+        throw new ApiError(409, "Student already exists")
+    }
+
+    const user = await User.create({
+        username,
+        fullName,
+        email,
+        password,
+        role,
+        hostel,
+        mobile,
+        room
+    })
+
+    const createdUser = await User.findById(user._id).select(
+        "-password -refreshToken"
+    );
+
+    if (!createdUser) {
+        throw new ApiError(
+            500,
+            "Something went wrong while registering the user"
+        );
+    }
+
+    return res.status(201).json(
+        new ApiResponse(
+            201,
+            createdUser,
+            "Student is created successfully`"
         )
     )
 })
@@ -257,28 +331,6 @@ const forgotPassword = AsyncHandler(async (req, res) => {
 
     return res.json(
         new ApiResponse(200, null, "Password reset successful")
-    );
-});
-
-const updateUserByAdmin = AsyncHandler(async (req, res) => {
-    const { username, email, mobile } = req.body;
-
-    if (!username && !email && !mobile) {
-        throw new ApiError(400, "Nothing to update");
-    }
-
-    const user = await User.findByIdAndUpdate(
-        req.params.userId,
-        { username, email, mobile },
-        { new: true, runValidators: true }
-    ).select("-password -refreshToken");
-
-    if (!user) {
-        throw new ApiError(404, "User not found");
-    }
-
-    return res.json(
-        new ApiResponse(200, user, `${user.role} details updated successfully`)
     );
 });
 
@@ -352,8 +404,9 @@ const createSuperAdmin = AsyncHandler(async (req, res) => {
         email,
         password,
         fullName,
+        mobile,
         role: "superAdmin",
-        mobile
+
     });
 
     const createdUser = await User.findById(superAdmin._id).select(
@@ -378,6 +431,178 @@ const createSuperAdmin = AsyncHandler(async (req, res) => {
         );
 });
 
+const getAllUsersForAdmin = AsyncHandler(async (req, res) => {
+    const { role, hostel, search, page = 1, limit = 10 } = req.query;
+
+    const query = {};
+
+    // 1️⃣ role filter
+    if (role) {
+        query.role = role;
+    }
+
+    // 2️⃣ hostel filter
+    if (hostel) {
+        query.hostel = hostel;
+    }
+
+    // 3️⃣ search (username OR fullName)
+    if (search) {
+        query.$or = [
+            { fullName: { $regex: search, $options: "i" } },
+            { username: { $regex: search, $options: "i" } }
+        ];
+    }
+
+    const users = await User.find(query)
+        .select("-password -refreshToken")
+        .populate("hostel", "name code")
+        .skip((page - 1) * limit)
+        .limit(Number(limit))
+        .sort({ createdAt: 1 });
+
+    const totalUsers = await User.countDocuments(query);
+
+    return res.status(200).json(
+        new ApiResponse(200, {
+            users,
+            pagination: {
+                total: totalUsers,
+                page: Number(page),
+                limit: Number(limit),
+                totalPages: Math.ceil(totalUsers / limit),
+            },
+        })
+    );
+});
+
+const getStudentsForWarden = AsyncHandler(async (req, res) => {
+  const { page = 1, limit = 10, search = "" } = req.query;
+
+  const matchStage = {
+    role: "student",
+    hostel: req.user.hostel,
+  };
+
+  if (search) {
+    matchStage.$or = [
+      { fullName: { $regex: search, $options: "i" } },
+      { username: { $regex: search, $options: "i" } },
+    ];
+  }
+
+  const pipeline = [
+    { $match: matchStage },
+
+    {
+      $lookup: {
+        from: "rooms",
+        localField: "room",
+        foreignField: "_id",
+        as: "room",
+      },
+    },
+
+    { $unwind: "$room" },
+
+    { $sort: { "room.number": 1 } },
+
+    { $skip: (page - 1) * limit },
+    { $limit: Number(limit) },
+
+    {
+      $project: {
+        password: 0,
+        refreshToken: 0,
+      },
+    },
+  ];
+
+  const students = await User.aggregate(pipeline);
+
+  // Count total
+  const totalStudents = await User.countDocuments(matchStage);
+
+  return res.status(200).json(
+    new ApiResponse(200, {
+      students,
+      pagination: {
+        total: totalStudents,
+        page: Number(page),
+        limit: Number(limit),
+        totalPages: Math.ceil(totalStudents / limit),
+      },
+    })
+  );
+});
+
+const getUserById = AsyncHandler(async (req, res) => {
+    const { userId } = req.params
+
+    const user = await User.findById(userId)
+        .populate("hostel", "name code")
+        .populate("room", "number")
+        .select("-password -refreshToken")
+
+    if (!user) {
+        throw new ApiError(404, "User not found")
+    }
+
+    // Warden restriction
+    if (
+        req.user.role === "warden" &&
+        user.hostel?._id.toString() !== req.user.hostel.toString()
+    ) {
+        throw new ApiError(403, "Unauthorized")
+    }
+
+    return res.status(200).json(
+        new ApiResponse(200, user, "User details fetched")
+    )
+})
+
+const updateUserByAdmin = AsyncHandler(async (req, res) => {
+    if (!["admin", "superAdmin"].includes(req.user.role)) {
+        throw new ApiError(403, "Unauthorized")
+    }
+
+    const { userId } = req.params
+
+    const allowedUpdates = [
+        "fullName",
+        "email",
+        "username",
+        "mobile",
+        "hostel",
+        "room"
+    ]
+
+    const updates = {}
+
+    for (const key of allowedUpdates) {
+        if (req.body[key] !== undefined) {
+            updates[key] = req.body[key]
+        }
+    }
+
+    const updatedUser = await User.findByIdAndUpdate(
+        userId,
+        { $set: updates },
+        { new: true, runValidators: true }
+    )
+        .populate("hostel", "name code")
+        .populate("room", "number")
+        .select("-password -refreshToken")
+
+    if (!updatedUser) {
+        throw new ApiError(404, "User not found")
+    }
+
+    return res.status(200).json(
+        new ApiResponse(200, updatedUser, "User updated successfully")
+    )
+})
+
 
 
 export {
@@ -385,9 +610,13 @@ export {
     refreshAccessToken,
     logoutUser,
     createAdmin,
-    createUser,
+    createWarden,
+    createStudent,
     forgotPassword,
-    updateUserByAdmin,
     changeCurrentPassword,
-    createSuperAdmin
+    createSuperAdmin,
+    getAllUsersForAdmin,
+    getStudentsForWarden,
+    getUserById,
+    updateUserByAdmin
 }

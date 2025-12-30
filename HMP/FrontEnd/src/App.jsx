@@ -1,10 +1,9 @@
 import { useEffect, useState } from 'react'
 import { Outlet } from 'react-router-dom'
-import './App.css'
 import { ThemeProvider } from './context/ThemeContext'
 
 function App() {
-  const [themeMode, setThemeMode] = useState("light")
+  const [themeMode, setThemeMode] = useState("dark")
 
   const lightTheme = () => setThemeMode("light")
   const darkTheme = () => setThemeMode("dark")

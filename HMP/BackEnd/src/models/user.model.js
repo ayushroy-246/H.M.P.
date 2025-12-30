@@ -42,13 +42,14 @@ const userSchema = new mongoose.Schema(
             required: [true, "Password is required"],
         },
 
-        room_no: {
+        room: {
             type: mongoose.Schema.Types.ObjectId,
             ref: "Room",
         },
 
         mobile:{
-            typer: String
+            type: String,
+            unique: true
         },
 
         refreshToken: {
