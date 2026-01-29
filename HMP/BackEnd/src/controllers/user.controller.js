@@ -204,11 +204,42 @@ const forgotPassword = AsyncHandler(async (req, res) => {
     );
 });
 
+const changeCurrentPassword = AsyncHandler(async (req, res) => {
+    const { oldPassword, newPassword, confirmPassword } = req.body;
 
+    if (!oldPassword || !newPassword || !confirmPassword) {
+        throw new ApiError(400, "All fields are required");
+    }
+
+    if (newPassword !== confirmPassword) {
+        throw new ApiError(400, "Passwords do not match");
+    }
+
+    const user = await User.findById(req.user._id);
+
+    if (!user) {
+        throw new ApiError(404, "User not found");
+    }
+
+    const isPasswordCorrect = await user.isPasswordCorrect(oldPassword);
+
+    if (!isPasswordCorrect) {
+        throw new ApiError(401, "Invalid old password");
+    }
+
+    user.password = newPassword;
+    user.refreshToken = undefined;
+    await user.save();
+
+    return res.status(200).json(
+        new ApiResponse(200, null, "Password changed successfully")
+    );
+});
 
 export {
     loginUser,
     refreshAccessToken,
     logoutUser,
-    forgotPassword
+    forgotPassword,
+    changeCurrentPassword
 }

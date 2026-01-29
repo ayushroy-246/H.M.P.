@@ -3,6 +3,7 @@ import { ApiError } from "../utilities/ApiError.js";
 import { ApiResponse } from "../utilities/ApiResponse.js";
 import { Staff } from "../models/staff.model.js";
 import { Complaint } from "../models/complaint.model.js";
+import mongoose from "mongoose";
 
 const createStaff = AsyncHandler(async (req, res) => {
     const { phone, fullName, roles, pin } = req.body;
@@ -15,9 +16,9 @@ const createStaff = AsyncHandler(async (req, res) => {
         throw new ApiError(400, "At least one role must be assigned");
     }
 
-    const existedStaff = await Staff.findOne({ 
-        phone, 
-        hostel: req.user.hostel 
+    const existedStaff = await Staff.findOne({
+        phone,
+        hostel: req.user.hostel
     });
 
     if (existedStaff) {
@@ -29,7 +30,7 @@ const createStaff = AsyncHandler(async (req, res) => {
         fullName,
         role: roles, // This is now an array: e.g. ['electrician', 'plumber']
         pin,
-        hostel: req.user.hostel 
+        hostel: req.user.hostel
     });
 
     const createdStaff = await Staff.findById(staff._id).select("-pin -refreshToken");
@@ -45,22 +46,37 @@ const createStaff = AsyncHandler(async (req, res) => {
 
 const getWardenComplainList = AsyncHandler(async (req, res) => {
     const { status, role, search } = req.query;
-    const wardenHostelId = req.user.hostel;
 
-    // The clean pipeline assignment you wanted
+    // 🔍 DEBUG LOG: See what the Warden user looks like
+    // console.log("Warden Request User:", {
+    //     id: req.user._id,
+    //     hostel: req.user.hostel
+    // });
+
+    // 1. SAFETY CHECK: Does the Warden have a hostel?
+    if (!req.user.hostel) {
+        return res.status(200).json(
+            new ApiResponse(200, [], "Warden is not assigned to any hostel yet.")
+        );
+    }
+
+    // 2. SAFE CONVERSION: Ensure ID is an ObjectId
+    // req.user.hostel might be a String or an Object, we force it to String then ObjectId
+    const wardenHostelId = new mongoose.Types.ObjectId(String(req.user.hostel));
+
     const complaints = await Complaint.aggregate([
-        // 1. Initial Match (Security)
+        // A. Match Hostel (Strict Type Check)
         {
             $match: {
-                hostel: new mongoose.Types.ObjectId(wardenHostelId)
+                hostel: wardenHostelId
             }
         },
 
-        // 2. Conditional Filters (We use $match stages that only run if the variable exists)
-        ...(status ? [{ $match: { statusbyStudent: status.toUpperCase() } }] : []),
-        ...(role ? [{ $match: { assignedRole: role.toLowerCase() } }] : []),
+        // B. Filters (Only apply if they exist)
+        ...(status && status !== "ALL" ? [{ $match: { statusbyStudent: status } }] : []),
+        ...(role && role !== "ALL" ? [{ $match: { assignedRole: role } }] : []),
 
-        // 3. Lookups (Joining tables)
+        // C. Lookups (Get Student & Room details)
         {
             $lookup: {
                 from: "users",
@@ -78,16 +94,17 @@ const getWardenComplainList = AsyncHandler(async (req, res) => {
             }
         },
 
-        // 4. Formatting (The $addFields trick)
+        // D. Flatten Fields (Make them easy to read)
         {
             $addFields: {
                 studentName: { $arrayElemAt: ["$studentDoc.fullName", 0] },
                 enrollmentNo: { $arrayElemAt: ["$studentDoc.username", 0] },
-                roomNumber: { $arrayElemAt: ["$roomDoc.number", 0] }
+                // Handle case where room might be missing/deleted
+                roomNumber: { $ifNull: [{ $arrayElemAt: ["$roomDoc.roomNumber", 0] }, "N/A"] }
             }
         },
 
-        // 5. Search Logic
+        // E. Search (Optional)
         ...(search ? [{
             $match: {
                 $or: [
@@ -98,16 +115,12 @@ const getWardenComplainList = AsyncHandler(async (req, res) => {
             }
         }] : []),
 
-        // 6. Cleanup and Sort
-        {
-            $project: {
-                studentDoc: 0,
-                roomDoc: 0,
-                __v: 0
-            }
-        },
+        // F. Sort Newest First
         { $sort: { createdAt: -1 } }
     ]);
+
+    // 🔍 DEBUG LOG: Check results count
+    // console.log(`Found ${complaints.length} complaints for hostel ${wardenHostelId}`);
 
     return res.status(200).json(
         new ApiResponse(200, complaints, "Data fetched successfully")
@@ -269,41 +282,11 @@ const getStudentDetail = AsyncHandler(async (req, res) => {
         new ApiResponse(200, studentDetail[0], "Student details fetched")
     );
 });
-const changeCurrentPassword = AsyncHandler(async (req, res) => {
-    const { oldPassword, newPassword, confirmPassword } = req.body;
 
-    if (!oldPassword || !newPassword || !confirmPassword) {
-        throw new ApiError(400, "All fields are required");
-    }
 
-    if (newPassword !== confirmPassword) {
-        throw new ApiError(400, "Passwords do not match");
-    }
-
-    const user = await User.findById(req.user._id);
-
-    if (!user) {
-        throw new ApiError(404, "User not found");
-    }
-
-    const isPasswordCorrect = await user.isPasswordCorrect(oldPassword);
-
-    if (!isPasswordCorrect) {
-        throw new ApiError(401, "Invalid old password");
-    }
-
-    user.password = newPassword;
-    user.refreshToken = undefined;
-    await user.save();
-
-    return res.status(200).json(
-        new ApiResponse(200, null, "Password changed successfully")
-    );
-});
-export { 
+export {
     createStaff,
     getWardenComplainList,
     getStudentListForWarden,
-    getStudentDetail,
-    changeCurrentPassword
+    getStudentDetail
 };

@@ -3,7 +3,8 @@ import { ApiError } from "../utilities/ApiError.js";
 import { ApiResponse } from "../utilities/ApiResponse.js";
 import { Complaint } from "../models/complaint.model.js";
 import { User } from "../models/user.model.js";
-
+import { StudentProfile } from "../models/studentProfile.model.js";
+import mongoose from "mongoose";
 
 const decodeEnrollmentId = (username) => {
     const yearStr = username.substring(0, 4); // "2024"
@@ -218,11 +219,130 @@ const getStudentComplaints = AsyncHandler(async (req, res) => {
     );
 });
 
+const getStudentDashboardStats = AsyncHandler(async (req, res) => {
+    const studentId = req.user._id;
+
+    const stats = await User.aggregate([
+        // 1. Match the current logged-in student
+        { $match: { _id: new mongoose.Types.ObjectId(studentId) } },
+
+        // 2. Lookup Hostel Details (to get name)
+        {
+            $lookup: {
+                from: "hostels", // Check your collection name (plural)
+                localField: "hostel",
+                foreignField: "_id",
+                as: "hostelDoc"
+            }
+        },
+
+        // 3. Lookup Room Details (to get number)
+        {
+            $lookup: {
+                from: "rooms",
+                localField: "room",
+                foreignField: "_id",
+                as: "roomDoc"
+            }
+        },
+
+        // 4. Lookup Warden (Find User who is 'warden' of this hostel)
+        // This is a "Pipeline Lookup" - advanced but powerful
+        {
+            $lookup: {
+                from: "users",
+                let: { hostelId: "$hostel" },
+                pipeline: [
+                    {
+                        $match: {
+                            $expr: {
+                                $and: [
+                                    { $eq: ["$hostel", "$$hostelId"] },
+                                    { $eq: ["$role", "warden"] }
+                                ]
+                            }
+                        }
+                    },
+                    { $project: { fullName: 1, mobile: 1 } } // Only need name/phone
+                ],
+                as: "wardenDoc"
+            }
+        },
+
+        // 5. Lookup Active Complaints Count
+        {
+            $lookup: {
+                from: "complaints",
+                let: { studentId: "$_id" },
+                pipeline: [
+                    {
+                        $match: {
+                            $expr: {
+                                $and: [
+                                    { $eq: ["$student", "$$studentId"] },
+                                    { $eq: ["$statusbyStudent", "PENDING"] }
+                                ]
+                            }
+                        }
+                    },
+                    { $count: "count" }
+                ],
+                as: "complaintStats"
+            }
+        },
+
+        // 6. Flatten the data for Frontend
+        {
+            $project: {
+                fullName: 1,
+                enrollment: "$username",
+                hostelName: { $arrayElemAt: ["$hostelDoc.name", 0] },
+                roomNumber: { $arrayElemAt: ["$roomDoc.number", 0] },
+                wardenName: { $arrayElemAt: ["$wardenDoc.fullName", 0] },
+                wardenPhone: { $arrayElemAt: ["$wardenDoc.mobile", 0] },
+                activeComplaints: { $arrayElemAt: ["$complaintStats.count", 0] }
+            }
+        }
+    ]);
+
+    // Handle case where user might not have a hostel assigned yet
+    const dashboardData = stats[0] || {};
+    
+    // Default complaints to 0 if none found
+    if (!dashboardData.activeComplaints) dashboardData.activeComplaints = 0;
+
+    return res.status(200).json(
+        new ApiResponse(200, dashboardData, "Dashboard stats fetched successfully")
+    );
+});
+
+const getCurrentStudentProfile = AsyncHandler(async (req, res) => {
+    let profile = await StudentProfile.findOne({ user: req.user._id }).lean(); // .lean() converts Mongoose doc to plain JS object
+
+
+    const academicData = decodeEnrollmentId(req.user.username);
+
+    // Merge: If profile exists, use it; otherwise start with empty object
+    // We prioritize DB data, but if academic fields are missing in DB, we use the calculated ones
+    const responseData = {
+        ...academicData, 
+        ...(profile || {}) 
+    };
+
+    return res.status(200).json(
+        new ApiResponse(200, responseData, "Profile fetched successfully")
+    );
+});
+
+
+
 export {
     updateProfileDetail,
     getProfileStatus,
     createComplaint,
     resolveComplaint,
     deleteComplaint,
-    getStudentComplaints
+    getStudentComplaints,
+    getStudentDashboardStats,
+    getCurrentStudentProfile
 };

@@ -1,6 +1,6 @@
 import { Complaint } from "../models/complaint.model.js";
-import { ApiResponse } from "../utilities/ApiResponse";
-import { AsyncHandler } from "../utilities/AsyncHandler";
+import { ApiResponse } from "../utilities/ApiResponse.js";
+import { AsyncHandler } from "../utilities/AsyncHandler.js";
 
 
 const getUniversalComplainStats = AsyncHandler(async (req, res) => {

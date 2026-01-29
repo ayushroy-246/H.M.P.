@@ -18,10 +18,14 @@ export const requireSuperAdmin = (req, res, next) => {
 };
 
 export const requireWarden = (req, res, next) => {
-    if( req.user.role !== "warden"){
-        throw new ApiError(403, "Warden access required");
+    if (!req.user) {
+        return res.status(401).json({ message: "Unauthorized" });
     }
-}
+    if (req.user.role !== "warden") {
+        return res.status(403).json({ message: "Access denied. Wardens only." });
+    }
+    next(); 
+};
 export const requireStudent = (req, res, next) => {
     if (req.user.role !== "student") {
         throw new ApiError(403, "Student access required");

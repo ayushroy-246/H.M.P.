@@ -1,18 +1,33 @@
-// import { Router } from "express";
-// import {
-//     logoutUser,
-//     changeCurrentPassword
-// } from "../controllers/user.controller.js";
-// import { updateProfileDetail, getProfileStatus } from "../controllers/student.controller.js"
-// import { verifyJWT } from "../middlewares/authentication.middleware.js";
-// import { requireStudent } from "../middlewares/authorize.middleware.js";
+import { Router } from "express";
+import {
+    logoutUser,
+    changeCurrentPassword
+} from "../controllers/user.controller.js";
+import {
+    updateProfileDetail,
+    getProfileStatus,
+    createComplaint,
+    resolveComplaint,
+    deleteComplaint,
+    getStudentComplaints,
+    getStudentDashboardStats,
+    getCurrentStudentProfile
+} from "../controllers/student.controller.js";
+import { verifyJWT } from "../middlewares/authentication.middleware.js";
+import { requireStudent } from "../middlewares/authorize.middleware.js";
 
-// const studentRouter = Router();
+const studentRouter = Router();
 
 
-// studentRouter.route("/logout").post(verifyJWT, logoutUser);
-// studentRouter.route("/change-password").post(verifyJWT, changeCurrentPassword);
-// studentRouter.route("/get-profile-status").post(verifyJWT, requireStudent, getProfileStatus);
-// studentRouter.route("/updateProfileDetail").post(verifyJWT, requireStudent, updateProfileDetail);
+studentRouter.route("/logout").post(verifyJWT, logoutUser);
+studentRouter.route("/change-password").post(verifyJWT, changeCurrentPassword);
+studentRouter.route("/profile-status").get(verifyJWT, requireStudent, getProfileStatus);
+studentRouter.route("/update-profile").post(verifyJWT, requireStudent, updateProfileDetail);
+studentRouter.route("/create-complaint").post(verifyJWT, requireStudent, createComplaint);
+studentRouter.route("/my-complaints").get(verifyJWT, requireStudent, getStudentComplaints);
+studentRouter.route("/resolve-complaint/:complaintId").patch(verifyJWT, requireStudent, resolveComplaint);
+studentRouter.route("/delete-complaint/:complaintId").delete(verifyJWT, requireStudent, deleteComplaint);
+studentRouter.route("/dashboard-stats").get(verifyJWT, requireStudent, getStudentDashboardStats);
+studentRouter.route("/profile").get(verifyJWT, requireStudent, getCurrentStudentProfile);
 
-// export default studentRouter;
+export default studentRouter;

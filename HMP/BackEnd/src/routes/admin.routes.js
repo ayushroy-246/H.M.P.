@@ -1,10 +1,9 @@
 import { Router } from "express";
-import { logoutUser } from "../controllers/user.controller.js"
+import { logoutUser, changeCurrentPassword } from "../controllers/user.controller.js"
 import {
     createAdmin,
     createWarden,
     createStudent,
-    changeCurrentPassword,
     createSuperAdmin,
     getAllUsersForAdmin,
     getUserById,

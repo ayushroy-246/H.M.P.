@@ -3,10 +3,7 @@ import React from 'react'
 import ReactDOM from 'react-dom/client'
 import { RouterProvider, createBrowserRouter, createRoutesFromElements, Route } from 'react-router-dom'
 import App from './App.jsx'
-
-
 import AuthLayout from './AuthLayout.jsx'
-
 import LandingPage from './pages/LandingPage.jsx'
 import Login from './pages/Login.jsx'
 import StudentDashboard from './pages/student/StudentDashboard.jsx'
@@ -16,7 +13,6 @@ import AdminDashboard from './pages/admin/AdminDashboard.jsx'
 import ForgotPassword from './pages/ForgotPassword'
 import AdminHomeStats from './pages/admin/AdminHomeStats'
 import AddStudentForm from './pages/admin/AddStudent'
-
 import { Provider } from 'react-redux'
 import { store } from './store/store.js'
 import AddWarden from './pages/admin/AddWarden'
@@ -27,11 +23,19 @@ import InviteAdmin from './pages/admin/InviteAdmin'
 import UpdateAccount from './pages/admin/UpdateAccount'
 import UserDetails from './pages/admin/UserDetails.jsx'
 import ChangePassword from './pages/ChangePassword'
-
-
+import StudentHomeStats from './pages/student/StudentHomeStats'
+import StudentProfile from './pages/student/StudentProfile'
+import StudentComplaints from './pages/student/StudentComplaints'
+import FileComplaint from './pages/student/FileComplaint'
+import WardenHomeStats from './pages/warden/WardenHomeStats'
+import StudentList from './pages/warden/StudentList'
+import StaffList from './pages/warden/StaffList'
+import RegisterStaff from './pages/warden/RegisterStaff'
+import WardenComplaints from './pages/warden/WardenComplaints'
+import WardenProfile from './pages/warden/WardenProfile'
 
 const ADMIN_ROLES = ["admin", "superAdmin"];
-const SUPER_ONLY = ["superAdmin"]
+const SUPER_ONLY = ["superAdmin"];
 
 const router = createBrowserRouter(
   createRoutesFromElements(
@@ -45,12 +49,14 @@ const router = createBrowserRouter(
       <Route path='login/admin' element={<Login role="admin" />} />
       <Route path='forgot-password' element={<ForgotPassword />} />
 
-      {/* Other Dashboard Routes */}
-      <Route path='student/dashboard' element={<StudentDashboard />} />
-      <Route path='staff/dashboard' element={<StaffDashboard />} />
-      <Route path='warden/dashboard' element={<WardenDashboard />} />
-
-      {/* Admin Dashboard with NESTED Routes */}
+      <Route
+        path='staff/dashboard'
+        element={
+          <AuthLayout authentication={true} allowedRoles={["staff"]}>
+            <StaffDashboard />
+          </AuthLayout>
+        }
+      />
       <Route
         path="admin/dashboard"
         element={
@@ -72,15 +78,46 @@ const router = createBrowserRouter(
             <AuthLayout authentication={true} allowedRoles={SUPER_ONLY}>
               <InviteAdmin />
             </AuthLayout>
-
           } />
         <Route path="search-user" element={<SearchUsers />} />
-        <Route path="users/:userId" element={<UserDetails />}/>
-
+        <Route path="users/:userId" element={<UserDetails />} />
       </Route>
+      <Route
+        path="warden/dashboard"
+        element={
+          <AuthLayout authentication={true} allowedRoles={["warden"]}>
+            <WardenDashboard />
+          </AuthLayout>
+        }
+      >
+        <Route index element={<WardenHomeStats />} />
+        <Route path="students" element={<StudentList />} />
+        <Route path="staff" element={<StaffList />} />
+        <Route path="create-staff" element={<RegisterStaff />} />
+        <Route path="complaints" element={<WardenComplaints />} />
+        <Route path="profile" element={<WardenProfile />} />
+        <Route path="change-password" element={<ChangePassword />} />
+      </Route>
+
+
+      <Route
+        path="student/dashboard"
+        element={
+          <AuthLayout authentication={true} allowedRoles={["student"]}>
+            <StudentDashboard />
+          </AuthLayout>
+        }
+      >
+        <Route index element={<StudentHomeStats />} />
+        <Route path="complaints" element={<StudentComplaints />} />
+        <Route path="complaints/file-complaint" element={<FileComplaint />} />
+        <Route path="profile" element={<StudentProfile />} />
+        <Route path="change-password" element={<ChangePassword />} />
+      </Route>
+
     </Route>
   )
-)
+);
 
 ReactDOM.createRoot(document.getElementById('root')).render(
   <React.StrictMode>
@@ -88,4 +125,4 @@ ReactDOM.createRoot(document.getElementById('root')).render(
       <RouterProvider router={router} />
     </Provider>
   </React.StrictMode>,
-)
+);

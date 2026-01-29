@@ -1,4 +1,5 @@
 import React from 'react';
+import { Link } from "react-router-dom";
 import useTheme from '../context/ThemeContext';
 import { Sun, Moon } from "lucide-react";
 
@@ -16,20 +17,24 @@ const Header = () => {
         {/* Left Section */}
         <div className="flex items-center gap-3">
           <a
-            href = "https://www.nitjsr.ac.in"
+            href="https://www.nitjsr.ac.in"
             target="_blank"
             rel="noopener noreferrer"
             className="hover:opacity-80 transition-opacity"
           >
             <img
-              src={ themeMode === "dark" ? "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcRmnE5VQ-tVxYPsnm8YEQDCRYOgKqwX-ONtIg&s" : "https://www.nitjsr.ac.in/static/media/logo_new1.85cf87db219a8a2bd4c9.png"}
+              src={
+                themeMode === "dark"
+                  ? "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcRmnE5VQ-tVxYPsnm8YEQDCRYOgKqwX-ONtIg&s"
+                  : "https://www.nitjsr.ac.in/static/media/logo_new1.85cf87db219a8a2bd4c9.png"
+              }
               alt="NIT JSR Logo"
               className="h-12 w-auto object-contain"
             />
           </a>
 
           <h1 className="text-2xl font-bold text-gray-900 dark:text-white">
-            NIT JSR HMP
+            <Link to="/">NIT JSR HMP</Link>
           </h1>
         </div>
 

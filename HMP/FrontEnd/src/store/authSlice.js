@@ -1,11 +1,11 @@
 import { createSlice } from "@reduxjs/toolkit";
 
-// Helper to get initial state from storage
 const storedUser = localStorage.getItem("userData");
 
 const initialState = {
     status: storedUser ? true : false,
-    userData: storedUser ? JSON.parse(storedUser) : null
+    userData: storedUser ? JSON.parse(storedUser) : null, // Added missing comma here
+    isProfileComplete: true // Keep this true initially to avoid a "flicker" of the blur
 };
 
 const authSlice = createSlice({
@@ -15,16 +15,20 @@ const authSlice = createSlice({
         login: (state, action) => {
             state.status = true;
             state.userData = action.payload;
-            // Save to browser so it doesn't disappear on refresh
             localStorage.setItem("userData", JSON.stringify(action.payload));
         },
         logout: (state) => {
             state.status = false;
             state.userData = null;
+            state.isProfileComplete = true; // Reset on logout
             localStorage.removeItem("userData");
+        },
+        // IMPORTANT: Add this so you can update the status from your components
+        setProfileStatus: (state, action) => {
+            state.isProfileComplete = action.payload;
         }
     }
 });
 
-export const { login, logout } = authSlice.actions;
+export const { login, logout, setProfileStatus } = authSlice.actions;
 export default authSlice.reducer;

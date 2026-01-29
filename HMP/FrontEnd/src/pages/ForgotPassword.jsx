@@ -38,7 +38,7 @@ const ForgotPassword = () => {
 
       // Optional: redirect after success
       setTimeout(() => {
-        navigate("/login/admin"); // or generic login page
+        navigate(-1); // or generic login page
       }, 1500);
     } catch (err) {
       setError(
