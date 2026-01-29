@@ -66,8 +66,8 @@ const loginUser = AsyncHandler(async (req, res) => {
     const loggedInUser = await User.findById(user._id).select("-password -refreshToken")
     const options = {
         httpOnly: true,
-        secure: process.env.NODE_ENV === "production",
-        sameSite: "strict",
+        secure: true,
+        sameSite: "None",
     }
     return res
         .status(200)
@@ -101,11 +101,11 @@ const refreshAccessToken = AsyncHandler(async (req, res) => {
         );
 
         // --- UNIFIED LOGIC START ---
-        
+
         // 1. Determine which model to use. 
         // You can send 'userType' from frontend or check the decodedToken if you included role there.
-        const userType = req.body.userType || decodedToken?.roleType; 
-        
+        const userType = req.body.userType || decodedToken?.roleType;
+
         // If your token doesn't have roleType, we try to find in Staff first if it fails, try User.
         // But a cleaner way is to just try finding in both if not specified:
         let user = await User.findById(decodedToken?._id);
@@ -115,7 +115,7 @@ const refreshAccessToken = AsyncHandler(async (req, res) => {
             user = await Staff.findById(decodedToken?._id);
             Model = Staff;
         }
-        
+
         // --- UNIFIED LOGIC END ---
 
         if (!user) {
