@@ -3,6 +3,8 @@ import { ApiError } from "../utilities/ApiError.js";
 import { ApiResponse } from "../utilities/ApiResponse.js";
 import { Staff } from "../models/staff.model.js";
 import { Complaint } from "../models/complaint.model.js";
+import { Notice } from "../models/notice.model.js";
+import { User } from "../models/user.model.js";
 import mongoose from "mongoose";
 
 const createStaff = AsyncHandler(async (req, res) => {
@@ -283,10 +285,37 @@ const getStudentDetail = AsyncHandler(async (req, res) => {
     );
 });
 
+const createNotice = AsyncHandler(async (req, res) => {
+    const {title, description} = req.body;
+
+    if ([title, description].some(field => !field?.trim())) {
+        throw new ApiError(400, "Title and Description are required");
+    }
+
+    const user = await User.findById(req.user._id);
+
+    if(!user){
+        throw new ApiError(404, "Warden record not found")
+    }
+        
+    const notice = await Notice.create({
+        title,
+        description,
+        issuedBy: user._id,
+        hostel: user.hostel
+    });
+
+    return res.status(201).json(
+            new ApiResponse(201, notice, "Notice issued successfully")
+        );
+    
+})
+
 
 export {
     createStaff,
     getWardenComplainList,
     getStudentListForWarden,
-    getStudentDetail
+    getStudentDetail,
+    createNotice
 };
