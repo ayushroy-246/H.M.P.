@@ -8,7 +8,8 @@ import {
   Home,
   AlertCircle,
   FileText,
-  GraduationCap
+  GraduationCap,
+  Bell
 } from "lucide-react"; 
 
 const StudentDashboard = () => {
@@ -68,6 +69,8 @@ const StudentDashboard = () => {
       items: [
         { to: "/student/dashboard", label: "Dashboard", icon: <Home size={20} />, end: true },
         { to: "complaints", label: "My Complaints", icon: <AlertCircle size={20} /> },
+        { to: "notices", label: "Notices", icon: <Bell size={20} /> },
+
       ],
     },
   ];

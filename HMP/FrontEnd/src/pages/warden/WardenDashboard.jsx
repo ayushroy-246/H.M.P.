@@ -2,7 +2,7 @@ import { Outlet } from "react-router-dom";
 import DashboardLayout from "@/components/DashboardLayout";
 import { 
   Home, Users, Briefcase, 
-  UserPlus, ClipboardList
+  UserPlus, ClipboardList, Bell
 } from "lucide-react";
 
 const WardenDashboard = () => {
@@ -44,6 +44,7 @@ const WardenDashboard = () => {
       title: "Operations",
       items: [
         { to: "complaints", label: "All Complaints", icon: <ClipboardList size={20} /> },
+        { to: "notices", label: "Notices", icon: <Bell size={20} /> },
       ],
     },
   ];

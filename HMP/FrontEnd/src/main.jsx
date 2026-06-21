@@ -33,6 +33,9 @@ import StaffList from './pages/warden/StaffList'
 import RegisterStaff from './pages/warden/RegisterStaff'
 import WardenComplaints from './pages/warden/WardenComplaints'
 import WardenProfile from './pages/warden/WardenProfile'
+import StudentNotices from './pages/student/StudentNotices';
+import WardenNotices from './pages/warden/WardenNotices';
+import CreateNotice from './pages/warden/CreateNotice';
 
 const ADMIN_ROLES = ["admin", "superAdmin"];
 const SUPER_ONLY = ["superAdmin"];
@@ -92,6 +95,8 @@ const router = createBrowserRouter(
         <Route path="staff" element={<StaffList />} />
         <Route path="create-staff" element={<RegisterStaff />} />
         <Route path="complaints" element={<WardenComplaints />} />
+        <Route path="notices" element={<WardenNotices />} />
+        <Route path="notices/create" element={<CreateNotice />} />
         <Route path="profile" element={<WardenProfile />} />
         <Route path="change-password" element={<ChangePassword />} />
       </Route>
@@ -107,6 +112,7 @@ const router = createBrowserRouter(
       >
         <Route index element={<StudentHomeStats />} />
         <Route path="complaints" element={<StudentComplaints />} />
+        <Route path="notices" element={<StudentNotices />} />
         <Route path="complaints/file-complaint" element={<FileComplaint />} />
         <Route path="profile" element={<StudentProfile />} />
         <Route path="change-password" element={<ChangePassword />} />
