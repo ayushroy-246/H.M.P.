@@ -1,6 +1,7 @@
-import "./env.js";
+import "dotenv/config";
 import connectDB from "./db/index.js";
-import {app} from "./app.js";
+import { app } from "./app.js";
+//import redis from "./db/redis.js"
 
 connectDB()
     .then(() => {
